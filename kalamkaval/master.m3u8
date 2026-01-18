@@ -2,10 +2,9 @@
 #EXT-X-VERSION:3
 
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Malayalam",LANGUAGE="mal",DEFAULT=YES,AUTOSELECT=YES,URI="audio/mal/index.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Malayalam AD",LANGUAGE="mal",URI="audio/mal_ad/index.m3u8"
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Tamil",LANGUAGE="tam",URI="audio/tam/index.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Telugu",LANGUAGE="tel",URI="audio/tel/index.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",NAME="Hindi",LANGUAGE="hin",URI="audio/hin/index.m3u8"
+
 
 #EXT-X-STREAM-INF:BANDWIDTH=5000000,RESOLUTION=1920x1080,CODECS="avc1.640028,mp4a.40.2",AUDIO="audio"
 video/1080p/index.m3u8
+
