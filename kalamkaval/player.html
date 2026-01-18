@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalamkaval (2026) – Premium Player</title>
+    
+    <!-- HLS.js -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #e5e5e5;
+        }
+
+        /* Custom scrollbar for the track list */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #1a1a1a; 
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #404040; 
+            border-radius: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+
+        /* Video container aspect ratio handling */
+        .video-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+        }
+
+        video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        /* Active track styling */
+        .track-item.active {
+            background-color: rgba(34, 197, 94, 0.1); /* Green tint */
+            border-left: 3px solid #22c55e;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col md:flex-row overflow-hidden">
+
+    <!-- Main Content Area (Video) -->
+    <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-8 relative z-10">
+        
+        <!-- Header -->
+        <header class="w-full max-w-6xl mb-6 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white">Kalamkaval <span class="text-gray-500 text-lg font-normal">(2026)</span></h1>
+                <p class="text-gray-400 text-sm mt-1 flex items-center gap-2">
+                    <span class="bg-gray-800 px-2 py-0.5 rounded text-xs text-gray-300">1080p HD</span>
+                    <span class="bg-red-900/50 text-red-200 px-2 py-0.5 rounded text-xs">Action</span>
+                </p>
+            </div>
+            
+            <!-- Mobile Toggle for Settings (Visible on small screens) -->
+            <button id="mobile-settings-btn" class="md:hidden p-2 bg-gray-800 rounded-full hover:bg-gray-700 transition">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+            </button>
+        </header>
+
+        <!-- Video Player Wrapper -->
+        <div class="w-full max-w-6xl">
+            <div class="video-container ring-1 ring-white/10">
+                <video id="video" controls playsinline poster="https://via.placeholder.com/1280x720/000000/333333?text=Loading+Kalamkaval..."></video>
+            </div>
+            
+            <!-- Error Message Area -->
+            <div id="error-display" class="hidden mt-4 p-4 bg-red-900/20 border border-red-900/50 rounded-lg text-red-200 text-sm"></div>
+        </div>
+    </main>
+
+    <!-- Sidebar / Settings Panel -->
+    <aside id="sidebar" class="w-full md:w-80 bg-[#111] border-l border-white/5 flex flex-col h-[50vh] md:h-screen fixed bottom-0 md:relative md:right-0 transform translate-y-full md:translate-y-0 transition-transform duration-300 z-20 shadow-2xl md:shadow-none">
+        
+        <div class="p-6 border-b border-white/5 flex justify-between items-center">
+            <h2 class="text-lg font-semibold flex items-center gap-2">
+                <i data-lucide="music" class="w-5 h-5 text-green-500"></i>
+                Audio Tracks
+            </h2>
+            <button id="close-mobile-settings" class="md:hidden text-gray-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- Track List Container -->
+        <div class="flex-1 overflow-y-auto custom-scroll p-4">
+            <div id="audio-list" class="space-y-2">
+                <p class="text-gray-500 text-sm italic text-center py-4">Loading audio tracks...</p>
+            </div>
+        </div>
+
+        <!-- Connection Status Footer -->
+        <div class="p-4 bg-black/20 border-t border-white/5 text-xs text-gray-500 flex justify-between">
+            <span id="status-text">Connecting...</span>
+            <span id="buffer-text">Buffer: 0s</span>
+        </div>
+    </aside>
+
+    <!-- Overlay for mobile sidebar -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/50 z-10 hidden md:hidden glass"></div>
+
+    <script>
+        // --- Configuration ---
+        const video = document.getElementById('video');
+        const sourceUrl = "https://pixovia.github.io/movies-files/kalamkaval/master.m3u8"; // Your specific path
+        
+        // UI Elements
+        const audioListEl = document.getElementById('audio-list');
+        const errorDisplay = document.getElementById('error-display');
+        const statusText = document.getElementById('status-text');
+        const bufferText = document.getElementById('buffer-text');
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+        // Initialize Icons
+        lucide.createIcons();
+
+        // --- HLS Setup ---
+        if (Hls.isSupported()) {
+            const hls = new Hls({
+                enableWorker: true,
+                lowLatencyMode: false,
+                capLevelToPlayerSize: true
+            });
+
+            // 1. Load Source
+            hls.loadSource(sourceUrl);
+            hls.attachMedia(video);
+
+            // 2. Handling Manifest Parsed (Stream Ready)
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                statusText.innerText = "Stream Ready";
+                statusText.className = "text-green-500";
+                video.play().catch(e => console.log("Auto-play blocked, waiting for user interaction"));
+                
+                // Initial render of tracks
+                renderAudioTracks(hls);
+            });
+
+            // 3. Handling Audio Switch
+            hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, () => {
+                renderAudioTracks(hls);
+            });
+
+            hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, (event, data) => {
+                // Re-render to update the "active" styling
+                renderAudioTracks(hls);
+                console.log(`Switched to audio track ID: ${data.id}`);
+            });
+
+            // 4. Auto-select Malayalam Logic (As requested)
+            hls.on(Hls.Events.MANIFEST_LOADED, () => {
+                const tracks = hls.audioTracks;
+                const malIndex = tracks.findIndex(t => t.lang === 'mal' || t.name.toLowerCase().includes('malayalam'));
+                
+                if (malIndex !== -1) {
+                    hls.audioTrack = malIndex;
+                    console.log("Auto-selected Malayalam track");
+                }
+            });
+
+            // 5. Error Handling
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    statusText.innerText = "Error: " + data.type;
+                    statusText.className = "text-red-500";
+                    
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.error("Network error, trying to recover...");
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.error("Media error, trying to recover...");
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            hls.destroy();
+                            break;
+                    }
+                }
+            });
+            
+            // --- MOCK DATA FOR UI PREVIEW (Remove this block in production) ---
+            // Since the local file 'https://pixovia.github.io/movies-files/kalamkaval/master.m3u8' won't load in this web preview,
+            // we simulate the track list so you can see the UI design.
+            hls.on(Hls.Events.ERROR, (e, data) => {
+                 if(data.details === "manifestLoadError") {
+                     showError("Could not load local file 'https://pixovia.github.io/movies-files/kalamkaval/master.m3u8'. Using mock data for UI demo.");
+                     simulateAudioTracksForUI(hls);
+                 }
+            });
+
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            video.src = sourceUrl;
+            video.addEventListener('loadedmetadata', () => {
+                video.play();
+                // Note: Safari handles audio selection natively in the system controls,
+                // but we can still try to list them if the API allows access to audioTracks.
+            });
+        }
+
+        // --- UI Functions ---
+
+        function renderAudioTracks(hlsInstance) {
+            const tracks = hlsInstance.audioTracks;
+            const currentTrackId = hlsInstance.audioTrack;
+
+            audioListEl.innerHTML = ""; // Clear list
+
+            if (tracks.length === 0) {
+                audioListEl.innerHTML = '<div class="text-gray-500 text-sm text-center">No additional audio tracks found.</div>';
+                return;
+            }
+
+            tracks.forEach((track, index) => {
+                const isSelected = currentTrackId === index;
+                
+                // Create Button Item
+                const btn = document.createElement('button');
+                btn.className = `track-item w-full text-left px-4 py-3 rounded-md transition-all duration-200 flex items-center justify-between group ${isSelected ? 'active bg-green-900/20 border-l-2 border-green-500' : 'hover:bg-white/5 text-gray-300'}`;
+                
+                // Language Name Formatting
+                const name = track.name || `Track ${index + 1}`;
+                const langCode = track.lang ? track.lang.toUpperCase() : 'UNK';
+
+                btn.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-medium text-sm ${isSelected ? 'text-white' : 'text-gray-300 group-hover:text-white'}">${name}</span>
+                        <span class="text-xs text-gray-500">${langCode}</span>
+                    </div>
+                    ${isSelected ? '<i data-lucide="check-circle" class="w-4 h-4 text-green-500"></i>' : '<i data-lucide="play-circle" class="w-4 h-4 text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity"></i>'}
+                `;
+
+                // Click Event
+                btn.onclick = () => {
+                    hlsInstance.audioTrack = index;
+                    // Force re-render immediately for UI feedback
+                    setTimeout(() => renderAudioTracks(hlsInstance), 50); 
+                };
+
+                audioListEl.appendChild(btn);
+            });
+
+            // Refresh icons since we added new DOM elements
+            lucide.createIcons();
+        }
+
+        // --- Helper: Simulate UI for Preview ---
+        function simulateAudioTracksForUI(hlsInstance) {
+            // This manually injects the data you provided in the prompt
+            // so you can see how the sidebar looks without the real file.
+            hlsInstance.audioTracks = [
+                { name: "Malayalam", lang: "mal", id: 0 },
+                { name: "Malayalam AD", lang: "mal", id: 1 },
+                { name: "Tamil", lang: "tam", id: 2 },
+                { name: "Telugu", lang: "tel", id: 3 },
+                { name: "Hindi", lang: "hin", id: 4 }
+            ];
+            hlsInstance.audioTrack = 0; // Default to Mal
+            renderAudioTracks(hlsInstance);
+        }
+
+        function showError(msg) {
+            errorDisplay.innerText = msg;
+            errorDisplay.classList.remove('hidden');
+        }
+
+        // --- Mobile Sidebar Toggle Logic ---
+        const mobileBtn = document.getElementById('mobile-settings-btn');
+        const closeBtn = document.getElementById('close-mobile-settings');
+
+        function toggleSidebar() {
+            const isClosed = sidebar.classList.contains('translate-y-full');
+            if (isClosed) {
+                sidebar.classList.remove('translate-y-full');
+                sidebarOverlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('translate-y-full');
+                sidebarOverlay.classList.add('hidden');
+            }
+        }
+
+        mobileBtn.addEventListener('click', toggleSidebar);
+        closeBtn.addEventListener('click', toggleSidebar);
+        sidebarOverlay.addEventListener('click', toggleSidebar);
+
+        // Update Buffer stats periodically
+        setInterval(() => {
+            if(video.buffered.length > 0) {
+                const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+                const duration = video.currentTime;
+                bufferText.innerText = `Buffer: ${(bufferedEnd - duration).toFixed(1)}s`;
+            }
+        }, 1000);
+
+    </script>
+</body>
+</html>
