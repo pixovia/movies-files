@@ -133,7 +133,7 @@
     <script>
         // --- Configuration ---
         const video = document.getElementById('video');
-        const sourceUrl = "https://pixovia.github.io/movies-files/kalamkaval/master.m3u8"; // Your specific path
+        const sourceUrl = "master.m3u8"; // Your specific path
         
         // UI Elements
         const audioListEl = document.getElementById('audio-list');
@@ -213,11 +213,11 @@
             });
             
             // --- MOCK DATA FOR UI PREVIEW (Remove this block in production) ---
-            // Since the local file 'https://pixovia.github.io/movies-files/kalamkaval/master.m3u8' won't load in this web preview,
+            // Since the local file 'master.m3u8' won't load in this web preview,
             // we simulate the track list so you can see the UI design.
             hls.on(Hls.Events.ERROR, (e, data) => {
                  if(data.details === "manifestLoadError") {
-                     showError("Could not load local file 'https://pixovia.github.io/movies-files/kalamkaval/master.m3u8'. Using mock data for UI demo.");
+                     showError("Could not load local file 'master.m3u8'. Using mock data for UI demo.");
                      simulateAudioTracksForUI(hls);
                  }
             });
@@ -284,10 +284,7 @@
             // so you can see how the sidebar looks without the real file.
             hlsInstance.audioTracks = [
                 { name: "Malayalam", lang: "mal", id: 0 },
-                { name: "Malayalam AD", lang: "mal", id: 1 },
                 { name: "Tamil", lang: "tam", id: 2 },
-                { name: "Telugu", lang: "tel", id: 3 },
-                { name: "Hindi", lang: "hin", id: 4 }
             ];
             hlsInstance.audioTrack = 0; // Default to Mal
             renderAudioTracks(hlsInstance);
@@ -328,4 +325,5 @@
 
     </script>
 </body>
+
 </html>
